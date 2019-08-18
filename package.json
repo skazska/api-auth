@@ -1,0 +1,55 @@
+{
+  "name": "@skazska/api-auth",
+  "preferGlobal": true,
+  "bin": "./index.js",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clear-dist": "rm -rf dist/*",
+    "clear-docs": "rm -rf docs/*",
+    "compile": "npm run clear-dist && tsc",
+    "compile-test": "tsc -p tsconfig.test.json",
+    "gen-docs": "npm run clear-docs && typedoc --out docs --mode modules",
+    "test": "npm run compile-test && mocha -r ts-node/register test/**/*.spec.ts",
+    "testjs": "mocha test/*/*.js",
+    "production": "npm run compile && mv node_modules dev_node_modules && npm install --production",
+    "deproduction": "rm -rf node_modules && mv dev_node_modules node_modules",
+    "aws-deploy": "deploy-aws service --aws-config-file=.deploy-aws-cfg.json --aws-accountId=266895356213",
+    "deploy": "npm run production && npm run aws-deploy && npm run deproduction"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skazska/timetables-api-auth.git"
+  },
+  "author": "skazska@gmail.com",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/skazska/timetables-api-auth/issues"
+  },
+  "homepage": "https://github.com/skazska/timetables-api-auth#readme",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.31",
+    "@types/chai": "^4.2.0",
+    "@types/jsonwebtoken": "^8.3.3",
+    "@types/mocha": "^5.2.7",
+    "@types/node": "^12.7.2",
+    "@types/uuid": "^3.4.5",
+    "chai": "^4.2.0",
+    "json-pointer": "^0.6.0",
+    "mocha": "^5.2.0",
+    "sinon": "^7.4.1",
+    "sinon-chai": "^3.3.0",
+    "ts-node": "^8.3.0",
+    "typedoc": "^0.15.0",
+    "typescript": "^3.5.3"
+  },
+  "dependencies": {
+    "@skazska/a-s-m-jwt-auth": "^0.0.1",
+    "@skazska/abstract-aws-service-model": "^0.0.6",
+    "@skazska/abstract-service-model": "^0.2.13",
+    "aws-sdk": "^2.512.0",
+    "uuid": "^3.3.2",
+    "validator": "^11.1.0"
+  }
+}

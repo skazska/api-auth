@@ -1,8 +1,8 @@
 import {UserModel, IUserKey, IUserProps} from "../model";
 import {GenericModelFactory, IModelDataAdepter, IModelError, GenericResult, success, IExecutable, IAuth, IAuthTokenResult, IError,
-    failure} from "@skazska/abstract-service-model";
+    failure,
+    ICUExecuteOptions} from "@skazska/abstract-service-model";
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
-import {IUserCUExecutableOptions} from "../executables";
 
 class UserModelIOAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
     getKey (data :any) :GenericResult<IUserKey, IModelError> {
@@ -11,9 +11,9 @@ class UserModelIOAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
     getProperties (data :any) :GenericResult<IUserProps, IModelError> {
         let result :IUserProps = {
             password :data.password,
-            name :data.name,
-            email :data.email
+            name :data.name
         };
+        if (data.email) result.email = data.email;
         if (data.person) result.person = data.person;
         return success(result);
     };
@@ -39,22 +39,18 @@ export abstract class UsersIO<EI, EO> extends AwsApiGwProxyIO<EI,EO> {
     };
 
     protected authTokens(input: IAwsApiGwProxyInput): IAuthTokenResult {
-        console.log('auth tokens');
-        console.dir(arguments);
         return success(input.event.headers && input.event.headers['x-auth-token']);
     }
 }
 
 export abstract class UsersKeyIO<EO> extends UsersIO<IUserKey,EO> {
     protected data(inputs: IAwsApiGwProxyInput): GenericResult<IUserKey, IError> {
-        return success({login: inputs.event.pathParameters.id});
+        return success({login: inputs.event.pathParameters.login});
     }
 }
 
-export abstract class UsersModelIO<EO> extends UsersIO<IUserCUExecutableOptions,EO> {
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult<IUserCUExecutableOptions, IError> {
-        console.log('post data');
-        console.dir(arguments);
+export abstract class UsersModelIO<EO> extends UsersIO<ICUExecuteOptions,EO> {
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult<ICUExecuteOptions, IError> {
 
         try {
             let data = JSON.parse(inputs.event.body);

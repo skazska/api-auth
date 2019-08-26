@@ -45,11 +45,11 @@
     "typescript": "^3.5.3"
   },
   "dependencies": {
-    "@skazska/a-s-m-jwt-auth": "^0.0.1",
-    "@skazska/abstract-aws-service-model": "^0.0.6",
-    "@skazska/abstract-service-model": "^0.2.13",
-    "aws-sdk": "^2.512.0",
-    "uuid": "^3.3.2",
+    "@skazska/a-s-m-jwt-auth": "^0.0.4",
+    "@skazska/abstract-aws-service-model": "^0.0.10",
+    "@skazska/abstract-service-model": "^0.3.3",
+    "aws-sdk": "^2.518.0",
+    "uuid": "^3.3.3",
     "validator": "^11.1.0"
   }
 }

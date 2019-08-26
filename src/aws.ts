@@ -1,10 +1,8 @@
 import {GetIO} from "./aws/i-o/get";
-import {UserReadExecutable} from "./executables/read";
+import {factory} from "./executables";
 import {Authenticator} from "./authenticator";
 import {EditIO} from "./aws/i-o/edit";
-import {UserSaveExecutable} from "./executables/save";
 import {DeleteIO} from "./aws/i-o/delete";
-import {RegExIdentity} from "@skazska/abstract-service-model";
 
 export interface IApiGwProxyProviderConfig {
     GET? :GetIO,
@@ -17,7 +15,6 @@ export interface IApiGwProxyProviderConfig {
 export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
     return async (event, context, callback) => {
 
-        console.dir(event);
         try {
             const io = config[event.httpMethod];
             const result = await io.handler({event: event, context: context, callback: callback});
@@ -41,21 +38,21 @@ export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
     };
 };
 
-const authenticator = Authenticator.getInstance(RegExIdentity);
-const readExecutable = UserReadExecutable.getInstance();
+const authenticator = Authenticator.getInstance({secretSource: '@-api-secrets'});
+const readExecutable = factory.readInstance();
 const getIo = new GetIO(readExecutable, authenticator);
 
-const deleteExecutable = UserReadExecutable.getInstance();
+const deleteExecutable = factory.deleteInstance();
 const deleteIo = new DeleteIO(deleteExecutable, authenticator);
 
-const createExecutable = UserSaveExecutable.getInstance('create');
-const postIo = new EditIO(createExecutable, authenticator);
+const createExecutable = factory.createInstance();
+const postIo = new EditIO(createExecutable);
 
-const replaceExecutable = UserSaveExecutable.getInstance('replace');
+const replaceExecutable = factory.replaceInstance();
 const replaceIo = new EditIO(replaceExecutable, authenticator);
 
 // TODO
-const updateExecutable = UserSaveExecutable.getInstance('update');
+const updateExecutable = factory.updateInstance();
 const updateIo = new EditIO(updateExecutable, authenticator);
 
 

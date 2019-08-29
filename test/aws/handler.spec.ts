@@ -25,18 +25,16 @@ const secretResponse = JSON.stringify({
 
 const tests = [
     {
-        info: 'GET with valid token',
+        info: '#0 GET with valid token returns user data got from storage',
         httpMethod: 'GET',
         grant: {
             object: 'users',
             operation: 'read',
-            subject: 'usr',
-            realms: ['r1']
+            subject: 'usr'
         },
         storageMethod: 'get',
         storageResponse: {Item: {login: 'usr', password: 'pass', name: 'name'}},
         storageError: null,
-        secretResponse: {SecretString: secretResponse},
         executable: factory.readInstance,
         ioConstructor: () => GetIO,
         eventPart: {
@@ -48,64 +46,69 @@ const tests = [
         expectedStorageCallParams: {TableName: 'users', Key: {login: 'usr'}}
     },
     {
-        info: 'GET with no access token',
+        info: '#1 GET with no token - fails',
+        httpMethod: 'GET',
+        storageMethod: 'get',
+        storageResponse: {Item: {login: 'usr', password: 'pass', name: 'name'}},
+        storageError: null,
+        executable: factory.readInstance,
+        ioConstructor: () => GetIO,
+        eventPart: {
+            pathParameters: {login: 'usr'}
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "isAuthError": true,
+                    "message": "x-auth-token header missing",
+                }
+            ],
+            "message": "x-auth-token header missing"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#2 GET with token of no access  - fails',
         httpMethod: 'GET',
         grant: {
             object: 'users',
             operation: 'check',
             subject: 'usr',
-            realms: ['r1']
         },
         storageMethod: 'get',
         storageResponse: {Item: {login: 'usr', password: 'pass', name: 'name'}},
         storageError: null,
-        secretResponse: {SecretString: secretResponse},
         executable: factory.readInstance,
         ioConstructor: () => GetIO,
         eventPart: {
             pathParameters: {login: 'usr'}
         },
 
-        expectedResultBody: {login: 'usr', password: 'pass', name: 'name'},
-        expectedResultStatus: 403,
-        expectedStorageCallParams: {TableName: 'users', Key: {login: 'usr'}}
+        expectedResultBody: {
+            "errors": [
+                {
+                    "action": "read",
+                    "isAuthError": true,
+                    "message": "action not permitted",
+                    "object": "users",
+                }
+            ],
+            "message": "action not permitted"
+        },
+        expectedResultStatus: 403
     },
     {
-        info: 'GET with self only access and different subject',
-        httpMethod: 'GET',
-        grant: {
-            object: 'users',
-            operation: 'self',
-            subject: 'usr1',
-            realms: ['r1']
-        },
-        storageMethod: 'get',
-        storageResponse: {Item: {login: 'usr', password: 'pass', name: 'name'}},
-        storageError: null,
-        secretResponse: {SecretString: secretResponse},
-        executable: factory.readInstance,
-        ioConstructor: () => GetIO,
-        eventPart: {
-            pathParameters: {login: 'usr'}
-        },
-
-        expectedResultBody: {login: 'usr', password: 'pass', name: 'name'},
-        expectedResultStatus: 403,
-        expectedStorageCallParams: {TableName: 'users', Key: {login: 'usr'}}
-    },
-    {
-        info: 'GET with self only access',
+        info: '#3 GET with self only access returns user data got from storage',
         httpMethod: 'GET',
         grant: {
             object: 'users',
             operation: 'self',
             subject: 'usr',
-            realms: ['r1']
         },
         storageMethod: 'get',
         storageResponse: {Item: {login: 'usr', password: 'pass', name: 'name'}},
         storageError: null,
-        secretResponse: {SecretString: secretResponse},
         executable: factory.readInstance,
         ioConstructor: () => GetIO,
         eventPart: {
@@ -117,9 +120,44 @@ const tests = [
         expectedStorageCallParams: {TableName: 'users', Key: {login: 'usr'}}
     },
     {
+        info: '#4 GET with self only access and different subject fails',
+        httpMethod: 'GET',
+        grant: {
+            object: 'users',
+            operation: 'self',
+            subject: 'usr1',
+        },
+        storageMethod: 'get',
+        storageResponse: {Item: {login: 'usr', password: 'pass', name: 'name'}},
+        storageError: null,
+        executable: factory.readInstance,
+        ioConstructor: () => GetIO,
+        eventPart: {
+            pathParameters: {login: 'usr'}
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "action": "read",
+                    "isAuthError": true,
+                    "message": "action not permitted",
+                    "object": "users",
+                }
+            ],
+            "message": "action not permitted"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#5 POST with valid token puts data to storage and returns it',
         httpMethod: 'POST',
-        authRealm: 'users',
-        authOps: 'create',
+        grant: {
+            object: 'users',
+            operation: 'create',
+            subject: 'usr',
+        },
+        noAuthenticator: true, //(not using authenticator fot POST user),
         storageMethod: 'put',
         storageResponse: {Attributes: {login: 'usr', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
         storageError: null,
@@ -134,13 +172,87 @@ const tests = [
         expectedStorageCallParams: {TableName: 'users', Item: {login: 'usr', name: 'name', password: 'en-US'}}
     },
     {
+        info: '#6 POST with no token puts data to storage and returns it',
+        httpMethod: 'POST',
+        noAuthenticator: true, //(not using authenticator fot POST user),
+        storageMethod: 'put',
+        storageResponse: {Attributes: {login: 'usr', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+        storageError: null,
+        executable: factory.createInstance,
+        ioConstructor: () => EditIO,
+        eventPart: {
+            body: JSON.stringify({login: 'usr', name: 'name', password: 'en-US'})
+        },
+
+        expectedResultBody: {"password":"en-US","name":"name","login":"usr"},
+        expectedResultStatus: 201,
+        expectedStorageCallParams: {TableName: 'users', Item: {login: 'usr', name: 'name', password: 'en-US'}}
+    },
+    {
+        info: '#7 POST with create access and different subject puts data to storage and returns it',
+        httpMethod: 'POST',
+        grant: {
+            object: 'users',
+            operation: 'create',
+            subject: 'usr',
+        },
+        noAuthenticator: true, //(not using authenticator fot POST user),
+        storageMethod: 'put',
+        storageResponse: {Attributes: {login: 'usr1', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+        storageError: null,
+        executable: factory.createInstance,
+        ioConstructor: () => EditIO,
+        eventPart: {
+            body: JSON.stringify({login: 'usr1', name: 'name', password: 'en-US'})
+        },
+
+        expectedResultBody: {"password":"en-US","name":"name","login":"usr1"},
+        expectedResultStatus: 201,
+        expectedStorageCallParams: {TableName: 'users', Item: {login: 'usr1', name: 'name', password: 'en-US'}}
+    },
+    // {
+    //     // irrelevant as using no authenticator for CREATE user
+    //     info: '#8 POST with self only access and different subject fails',
+    //     httpMethod: 'POST',
+    //     grant: {
+    //         object: 'users',
+    //         operation: 'self',
+    //         subject: 'usr',
+    //     },
+    //     noAuthenticator: true, //(not using authenticator fot POST user),
+    //     storageMethod: 'put',
+    //     storageResponse: {Attributes: {login: 'usr1', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+    //     storageError: null,
+    //     executable: factory.createInstance,
+    //     ioConstructor: () => EditIO,
+    //     eventPart: {
+    //         body: JSON.stringify({login: 'usr1', name: 'name', password: 'en-US'})
+    //     },
+    //
+    //     expectedResultBody: {
+    //         "errors": [
+    //             {
+    //                 "action": "create",
+    //                 "isAuthError": true,
+    //                 "message": "action not permitted",
+    //                 "object": "users",
+    //             }
+    //         ],
+    //         "message": "action not permitted"
+    //     },
+    //     expectedResultStatus: 403
+    // },
+    {
+        info: '#8 PUT with valid token puts data to storage and returns it',
         httpMethod: 'PUT',
-        authRealm: 'users',
-        authOps: 'replace',
+        grant: {
+            object: 'users',
+            operation: 'replace',
+            subject: 'usr',
+        },
         storageMethod: 'put',
         storageResponse: {Attributes: {login: 'client', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
         storageError: null,
-        secretResponse: {SecretString: secretResponse},
         executable: factory.replaceInstance,
         ioConstructor: () => EditIO,
         ioConstructorOptions: {successStatus: 202},
@@ -153,13 +265,126 @@ const tests = [
         expectedStorageCallParams: {TableName: 'users', Item: {"login": "client", "password": "en-US", "name": "name"}}
     },
     {
-        httpMethod: 'DELETE',
+        info: '#9 PUT with no access token - fails',
+        httpMethod: 'PUT',
         authRealm: 'users',
-        authOps: 'delete',
+        authOps: 'replace',
+        storageMethod: 'put',
+        storageResponse: {Attributes: {login: 'client', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+        storageError: null,
+        executable: factory.replaceInstance,
+        ioConstructor: () => EditIO,
+        ioConstructorOptions: {successStatus: 202},
+        eventPart: {
+            body: JSON.stringify({login: 'client', name: 'name', password: 'en-US'})
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "isAuthError": true,
+                    "message": "x-auth-token header missing",
+                }
+            ],
+            "message": "x-auth-token header missing"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#10 PUT with token of no access - fails',
+        httpMethod: 'PUT',
+        grant: {
+            object: 'users',
+            operation: 'get',
+            subject: 'usr',
+        },
+        storageMethod: 'put',
+        storageResponse: {Attributes: {login: 'client', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+        storageError: null,
+        executable: factory.replaceInstance,
+        ioConstructor: () => EditIO,
+        ioConstructorOptions: {successStatus: 202},
+        eventPart: {
+            body: JSON.stringify({login: 'client', name: 'name', password: 'en-US'})
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "action": "replace",
+                    "isAuthError": true,
+                    "message": "action not permitted",
+                    "object": "users",
+                }
+            ],
+            "message": "action not permitted"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#11 PUT with self access token puts data to storage and returns it',
+        httpMethod: 'PUT',
+        grant: {
+            object: 'users',
+            operation: 'self',
+            subject: 'usr',
+        },
+        storageMethod: 'put',
+        storageResponse: {Attributes: {login: 'usr', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+        storageError: null,
+        executable: factory.replaceInstance,
+        ioConstructor: () => EditIO,
+        ioConstructorOptions: {successStatus: 202},
+        eventPart: {
+            body: JSON.stringify({login: 'usr', name: 'name', password: 'en-US'})
+        },
+
+        expectedResultBody: {"password":"en-US","name":"name","login":"usr"},
+        expectedResultStatus: 202,
+        expectedStorageCallParams: {TableName: 'users', Item: {"login": "usr", "password": "en-US", "name": "name"}}
+    },
+    {
+        info: '#12 PUT with self access token fails for different user',
+        httpMethod: 'PUT',
+        grant: {
+            object: 'users',
+            operation: 'self',
+            subject: 'usr',
+        },
+        storageMethod: 'put',
+        storageResponse: {Attributes: {login: 'client', name: 'executable expected to return passed model at the moment', password: 'en-US'}},
+        storageError: null,
+        executable: factory.replaceInstance,
+        ioConstructor: () => EditIO,
+        ioConstructorOptions: {successStatus: 202},
+        eventPart: {
+            body: JSON.stringify({login: 'client', name: 'name', password: 'en-US'})
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "action": "replace",
+                    "isAuthError": true,
+                    "message": "action not permitted",
+                    "object": "users",
+                }
+            ],
+            "message": "action not permitted"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#13 DELETE with valid token puts data to storage and returns it',
+        httpMethod: 'DELETE',
+        grant: {
+            object: 'users',
+            operation: 'delete',
+            subject: 'usr',
+        },
         storageMethod: 'delete',
         storageResponse: {Attributes: {}},
         storageError: null,
-        secretResponse: {SecretString: secretResponse},
         executable: factory.deleteInstance,
         ioConstructor: () => DeleteIO,
         eventPart: {
@@ -169,6 +394,110 @@ const tests = [
         expectedResultBody: '',
         expectedResultStatus: 204,
         expectedStorageCallParams: {TableName: 'users', Key: {"login": "client"}}
+    },
+    {
+        info: '#14 DELETE with no access token - fails',
+        httpMethod: 'DELETE',
+        storageMethod: 'delete',
+        storageResponse: {Attributes: {}},
+        storageError: null,
+        executable: factory.deleteInstance,
+        ioConstructor: () => DeleteIO,
+        eventPart: {
+            pathParameters: {login: 'client'}
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "isAuthError": true,
+                    "message": "x-auth-token header missing",
+                }
+            ],
+            "message": "x-auth-token header missing"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#15 DELETE with token of no access - fails',
+        httpMethod: 'DELETE',
+        grant: {
+            object: 'users',
+            operation: 'get',
+            subject: 'usr',
+        },
+        storageMethod: 'delete',
+        storageResponse: {Attributes: {}},
+        storageError: null,
+        executable: factory.deleteInstance,
+        ioConstructor: () => DeleteIO,
+        eventPart: {
+            pathParameters: {login: 'client'}
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "action": "delete",
+                    "isAuthError": true,
+                    "message": "action not permitted",
+                    "object": "users",
+                }
+            ],
+            "message": "action not permitted"
+        },
+        expectedResultStatus: 403
+    },
+    {
+        info: '#16 DELETE with self access token puts data to storage and returns it',
+        httpMethod: 'DELETE',
+        grant: {
+            object: 'users',
+            operation: 'self',
+            subject: 'usr',
+        },
+        storageMethod: 'delete',
+        storageResponse: {Attributes: {}},
+        storageError: null,
+        executable: factory.deleteInstance,
+        ioConstructor: () => DeleteIO,
+        eventPart: {
+            pathParameters: {login: 'usr'}
+        },
+
+        expectedResultBody: '',
+        expectedResultStatus: 204,
+        expectedStorageCallParams: {TableName: 'users', Key: {"login": "usr"}}
+    },
+    {
+        info: '#17 DELETE with self access token fails for different user',
+        httpMethod: 'DELETE',
+        grant: {
+            object: 'users',
+            operation: 'self',
+            subject: 'usr',
+        },
+        storageMethod: 'delete',
+        storageResponse: {Attributes: {}},
+        storageError: null,
+        executable: factory.deleteInstance,
+        ioConstructor: () => DeleteIO,
+        eventPart: {
+            pathParameters: {login: 'client'}
+        },
+
+        expectedResultBody: {
+            "errors": [
+                {
+                    "action": "delete",
+                    "isAuthError": true,
+                    "message": "action not permitted",
+                    "object": "users",
+                }
+            ],
+            "message": "action not permitted"
+        },
+        expectedResultStatus: 403
     }
 ];
 
@@ -194,21 +523,25 @@ describe('handler general tests', () => {
     let secretStub;
 
     const testRun = test => {
-        it(`#${test.httpMethod} calls storage client's ${test.storageMethod} method with ${JSON.stringify(test.expectedStorageCallParams)} and results with status ${test.expectedResultStatus} with ${JSON.stringify(test.expectedResultBody)}`, async () => {
+        it(test.info, async () => {
             const executable = test.executable(storage);
             let io;
             let event;
-            if (test.secretResponse) {
                 secret = Authenticator.getSecretsManagerClient();
                 authenticator = Authenticator.getInstance({secretSource: 'source', secretManagerClient: secret});
                 secretStub = sinon.stub(secret);
                 // stub SecretManager client method with expected response
-                secretStub.getSecretValue.callsFake(getFake(test.secretResponse));
+                secretStub.getSecretValue.callsFake(getFake({SecretString: secretResponse}));
+            if (test.noAuthenticator) {
+                io = test.ioConstructor().getInstance(executable, null, test.ioConstructorOptions);
+            } else {
+                io = test.ioConstructor().getInstance(executable, authenticator, test.ioConstructorOptions);
             }
-            io = test.ioConstructor().getInstance(executable, authenticator, test.ioConstructorOptions);
 
             if (test.grant) {
-                const token = await authenticator.grant({[test.grant.object]: test.operation}, test.grant.subject, test.grant.realms);
+                // const details = {};
+                // details[test.grant.object] = test.grant.operation;
+                const token = await authenticator.grant({[test.grant.object]: test.grant.operation}, test.grant.subject, test.grant.realms);
                 event = eventInput.get(Object.assign({
                     httpMethod: test.httpMethod,
                     headers: {'x-auth-token': token.get()}
@@ -245,11 +578,15 @@ describe('handler general tests', () => {
                 expect(result.body).equal('');
             }
 
-            // check if correct storage method is called
-            expect(client[test.storageMethod].args.length).eql(1);
+            if (test.expectedStorageCallParams) {
+                // check if correct storage method is called
+                expect(client[test.storageMethod].args.length).eql(1);
 
-            // check if storage method is called with expected params
-            expect(client[test.storageMethod].args[0][0]).eql(test.expectedStorageCallParams);
+                // check if storage method is called with expected params
+                expect(client[test.storageMethod].args[0][0]).eql(test.expectedStorageCallParams);
+            } else {
+                expect(client[test.storageMethod].args.length).eql(0);
+            }
 
 
             return true;
@@ -268,42 +605,26 @@ describe('handler general tests', () => {
         clientStub = sinon.stub(client);
     });
 
-    // it('no auth token', async () => {
-    //     const test = tests[0];
-    //     const executable = test.executable(storage);
-    //     const io = test.ioConstructor().getInstance(executable, authenticator, test.ioConstructorOptions);
-    //     const handler = apiGwProxyProvider({ [test.httpMethod]: io });
-    //
-    //     const event = eventInput.get(Object.assign({
-    //         httpMethod: test.httpMethod,
-    //     }, test.eventPart));
-    //     const context = eventContext.get({});
-    //     // stub storage client method with expected response
-    //     clientStub[test.storageMethod].yieldsRightAsync(test.storageError, test.storageResponse);
-    //
-    //     // stub storage client method with expected response
-    //     clientStub[test.storageMethod].yieldsRightAsync(test.storageError, test.storageResponse);
-    //
-    //     // run handler
-    //     const result :APIGatewayProxyResult = await new Promise((resolve, reject) => {
-    //         handler.call({}, event, context, (err, result) => {
-    //             if (err) return reject(err);
-    //             return resolve(result);
-    //         });
-    //     });
-    //
-    //     // check result
-    //     expect(result.statusCode).eql(403);
-    //     expect(result.headers).eql({
-    //         "Content-Type": "application/json"
-    //     });
-    //     expect(result.body).equal('{"message":"not identified","errors":[{"message":"bad tokens"}]}');
-    // });
-
     afterEach(() => {
         sinon.restore();
     });
 
-    // tests.forEach(testRun);
+    testRun(tests[0]);
     testRun(tests[1]);
+    testRun(tests[2]);
+    testRun(tests[3]);
+    testRun(tests[4]);
+    testRun(tests[5]);
+    testRun(tests[6]);
+    testRun(tests[7]);
+    testRun(tests[8]);
+    testRun(tests[9]);
+    testRun(tests[10]);
+    testRun(tests[11]);
+    testRun(tests[12]);
+    testRun(tests[13]);
+    testRun(tests[14]);
+    testRun(tests[15]);
+    testRun(tests[16]);
+    testRun(tests[17]);
 });

@@ -1,7 +1,8 @@
 import {UserModel, IUserKey, IUserProps} from "../model";
 import {GenericModelFactory, IModelDataAdepter, IModelError, GenericResult, success, IExecutable, IAuth, IAuthTokenResult, IError,
     failure,
-    ICUExecuteOptions} from "@skazska/abstract-service-model";
+    ICUExecuteOptions,
+    AbstractAuth} from "@skazska/abstract-service-model";
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
 
 class UserModelIOAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
@@ -39,7 +40,9 @@ export abstract class UsersIO<EI, EO> extends AwsApiGwProxyIO<EI,EO> {
     };
 
     protected authTokens(input: IAwsApiGwProxyInput): IAuthTokenResult {
-        return success(input.event.headers && input.event.headers['x-auth-token']);
+        let token = input.event.headers && input.event.headers['x-auth-token'];
+        if (!token) return failure([AbstractAuth.error('x-auth-token header missing')]);
+        return success(token);
     }
 }
 

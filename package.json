@@ -42,13 +42,13 @@
     "sinon-chai": "^3.3.0",
     "ts-node": "^8.3.0",
     "typedoc": "^0.15.0",
-    "typescript": "^3.5.3"
+    "typescript": "^3.6.2"
   },
   "dependencies": {
-    "@skazska/a-s-m-jwt-auth": "^0.0.4",
-    "@skazska/abstract-aws-service-model": "^0.0.10",
-    "@skazska/abstract-service-model": "^0.3.3",
-    "aws-sdk": "^2.518.0",
+    "@skazska/a-s-m-jwt-auth": "^0.0.7",
+    "@skazska/abstract-aws-service-model": "^0.0.12",
+    "@skazska/abstract-service-model": "^0.3.5",
+    "aws-sdk": "^2.519.0",
     "uuid": "^3.3.3",
     "validator": "^11.1.0"
   }

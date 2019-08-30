@@ -3,9 +3,7 @@ import {expect, use}  from 'chai';
 
 import {Authenticator} from "../../src/authenticator";
 import {APIGatewayProxyResult} from "aws-lambda";
-import {EditIO} from "../../src/aws/i-o/edit";
-import {DeleteIO} from "../../src/aws/i-o/delete";
-import {GetIO} from "../../src/aws/i-o/get";
+import {EditIO, DeleteIO, GetIO} from "../../src/aws/i-o/user";
 import {factory} from "../../src/executables";
 
 import {UserStorage} from "../../src/aws/storage";

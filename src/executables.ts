@@ -1,9 +1,16 @@
-import {ICRUDExecutableConfig, ICUExecuteOptions, CRUDExecutable, IAuthIdentity, GenericResult, IAuthError, success,
+import {
+    ICRUDExecutableConfig,
+    ICUExecuteOptions,
+    CRUDExecutable,
+    IAuthIdentity,
+    GenericResult,
+    IAuthError,
+    success,
     IRunError,
-    AbstractModelStorage} from "@skazska/abstract-service-model";
+    AbstractModelStorage
+} from "@skazska/abstract-service-model";
 import {IUserKey, IUserProps, UserModel} from "./model";
 import {UserStorage} from "./aws/storage";
-import {bool} from "aws-sdk/clients/signer";
 
 const defaultStorage = UserStorage.getInstance('users');
 
@@ -92,4 +99,4 @@ export const factory = {
             executor: CRUDExecutable.deleteExecutor,
         });
     }
-}
+};

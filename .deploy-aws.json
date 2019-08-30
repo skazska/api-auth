@@ -40,7 +40,7 @@
       ],
       "awsProperties": {
         "FunctionName": "timetables-api-users",
-        "Handler": "dist/aws.handler",
+        "Handler": "dist/aws.userHandler",
         "Timeout": 10,
         "Role": {
           "aws-deploy": "role.timetables-api-users/Arn"

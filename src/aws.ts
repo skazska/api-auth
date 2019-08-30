@@ -1,15 +1,13 @@
-import {GetIO} from "./aws/i-o/get";
+import {GetIO as GetUserIO, EditIO as EditUserIO, DeleteIO as DeleteUserIO} from "./aws/i-o/user";
 import {factory} from "./executables";
 import {Authenticator} from "./authenticator";
-import {EditIO} from "./aws/i-o/edit";
-import {DeleteIO} from "./aws/i-o/delete";
 
 export interface IApiGwProxyProviderConfig {
-    GET? :GetIO,
-    POST? :EditIO,
-    PUT? :EditIO, //TODO
-    PATCH? :EditIO,
-    DELETE? :DeleteIO
+    GET? :GetUserIO,
+    POST? :EditUserIO,
+    PUT? :EditUserIO, //TODO
+    PATCH? :EditUserIO,
+    DELETE? :DeleteUserIO
 }
 
 export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
@@ -40,26 +38,34 @@ export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
 
 const authenticator = Authenticator.getInstance({secretSource: '@-api-secrets'});
 const readExecutable = factory.readInstance();
-const getIo = new GetIO(readExecutable, authenticator);
+const getUserIO = new GetUserIO(readExecutable, authenticator);
 
 const deleteExecutable = factory.deleteInstance();
-const deleteIo = new DeleteIO(deleteExecutable, authenticator);
+const deleteUserIo = new DeleteUserIO(deleteExecutable, authenticator);
 
 const createExecutable = factory.createInstance();
-const postIo = new EditIO(createExecutable);
+const postUserIo = new EditUserIO(createExecutable);
 
 const replaceExecutable = factory.replaceInstance();
-const replaceIo = new EditIO(replaceExecutable, authenticator);
+const replaceUserIo = new EditUserIO(replaceExecutable, authenticator);
 
 // TODO
 const updateExecutable = factory.updateInstance();
-const updateIo = new EditIO(updateExecutable, authenticator);
+const updateUserIo = new EditUserIO(updateExecutable, authenticator);
 
 
-export const handler = apiGwProxyProvider({
-    'GET' :getIo,
-    'POST' :postIo,
-    'PUT' :replaceIo,
-    'PATCH' :updateIo, // TODO
-    'DELETE' :deleteIo
+export const userHandler = apiGwProxyProvider({
+    'GET' :getUserIO,
+    'POST' :postUserIo,
+    'PUT' :replaceUserIo,
+    'PATCH' :updateUserIo, // TODO
+    'DELETE' :deleteUserIo
 });
+
+// export const tokenHandler = apiGwProxyProvider({
+//     'GET' :getUserIO,
+//     'POST' :postUserIo,
+//     'PUT' :replaceUserIo,
+//     'PATCH' :updateUserIo, // TODO
+//     'DELETE' :deleteUserIo
+// });

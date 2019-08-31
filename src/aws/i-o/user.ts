@@ -4,14 +4,12 @@ import {
     IModelError,
     GenericResult,
     success,
-    IExecutable,
     IAuth,
-    IAuthTokenResult,
     IError,
     failure,
     ICUExecuteOptions,
     IModel,
-    AbstractAuth
+    AbstractExecutable
 } from "@skazska/abstract-service-model";
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
 import {APIGatewayProxyResult} from "aws-lambda";
@@ -39,7 +37,8 @@ class UserModelIOAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
     getProperties (data :any) :GenericResult<IUserProps, IModelError> {
         let result :IUserProps = {
             password :data.password,
-            name :data.name
+            name :data.name,
+            roles :data.roles
         };
         if (data.email) result.email = data.email;
         if (data.person) result.person = data.person;
@@ -70,16 +69,10 @@ interface IUsersIOOptions extends IAwsApiGwProxyIOOptions {
 abstract class UsersIO<EI, EO> extends AwsApiGwProxyIO<EI,EO> {
     protected options :IUsersIOOptions;
 
-    protected constructor(executable: IExecutable, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+    protected constructor(executable: AbstractExecutable<EI,EO>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
         super(executable, authenticator, {...{successStatus: 200}, ...options});
         if (!this.options.modelFactory) this.options.modelFactory = new UserModelIOFactory();
     };
-
-    protected authTokens(input: IAwsApiGwProxyInput): IAuthTokenResult {
-        let token = input.event.headers && input.event.headers['x-auth-token'];
-        if (!token) return failure([AbstractAuth.error('x-auth-token header missing')]);
-        return success(token);
-    }
 }
 
 /**
@@ -114,7 +107,7 @@ abstract class UsersModelIO<EO> extends UsersIO<ICUExecuteOptions,EO> {
  * User-io class, handles io for users api method DELETE
  */
 export class DeleteIO extends UsersKeyIO<null> {
-    constructor(executable: IExecutable, authenticator?: IAuth, options?: IUsersIOOptions) {
+    constructor(executable: AbstractExecutable<IUserKey,null>, authenticator?: IAuth, options?: IUsersIOOptions) {
         super(executable, authenticator, {...{successStatus: 204}, ...options});
     };
 
@@ -132,7 +125,7 @@ export class DeleteIO extends UsersKeyIO<null> {
  * User-io class, handles io for users api method CREATE, PUT or PATCH
  */
 export class EditIO extends UsersModelIO<IModel> {
-    constructor(executable: IExecutable, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+    constructor(executable: AbstractExecutable<ICUExecuteOptions,IModel>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
         super(executable, authenticator, {...{successStatus: 201}, ...options});
     };
 
@@ -151,7 +144,7 @@ export class EditIO extends UsersModelIO<IModel> {
  * User-io class, handles io for users api method GET
  */
 export class GetIO extends UsersKeyIO<IModel> {
-    constructor(executable: IExecutable, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+    constructor(executable: AbstractExecutable<IUserKey,IModel>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
         super(executable, authenticator, {...{successStatus: 200}, ...options});
     };
 

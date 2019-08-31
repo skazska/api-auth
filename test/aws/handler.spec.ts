@@ -4,7 +4,7 @@ import {expect, use}  from 'chai';
 import {Authenticator} from "../../src/authenticator";
 import {APIGatewayProxyResult} from "aws-lambda";
 import {EditIO, DeleteIO, GetIO} from "../../src/aws/i-o/user";
-import {factory} from "../../src/executables";
+import {factory} from "../../src/executables/user";
 
 import {UserStorage} from "../../src/aws/storage";
 import {apiGwProxyProvider} from "../../src/aws";
@@ -62,9 +62,9 @@ const tests = [
                     "message": "x-auth-token header missing",
                 }
             ],
-            "message": "x-auth-token header missing"
+            "message": "Unauthorized"
         },
-        expectedResultStatus: 403
+        expectedResultStatus: 401
     },
     {
         info: '#2 GET with token of no access  - fails',
@@ -92,7 +92,7 @@ const tests = [
                     "object": "users",
                 }
             ],
-            "message": "action not permitted"
+            "message": "Forbidden"
         },
         expectedResultStatus: 403
     },
@@ -143,7 +143,7 @@ const tests = [
                     "object": "users",
                 }
             ],
-            "message": "action not permitted"
+            "message": "Forbidden"
         },
         expectedResultStatus: 403
     },
@@ -236,7 +236,7 @@ const tests = [
     //                 "object": "users",
     //             }
     //         ],
-    //         "message": "action not permitted"
+    //         "message": "Forbidden"
     //     },
     //     expectedResultStatus: 403
     // },
@@ -284,9 +284,9 @@ const tests = [
                     "message": "x-auth-token header missing",
                 }
             ],
-            "message": "x-auth-token header missing"
+            "message": "Unauthorized"
         },
-        expectedResultStatus: 403
+        expectedResultStatus: 401
     },
     {
         info: '#10 PUT with token of no access - fails',
@@ -315,7 +315,7 @@ const tests = [
                     "object": "users",
                 }
             ],
-            "message": "action not permitted"
+            "message": "Forbidden"
         },
         expectedResultStatus: 403
     },
@@ -368,7 +368,7 @@ const tests = [
                     "object": "users",
                 }
             ],
-            "message": "action not permitted"
+            "message": "Forbidden"
         },
         expectedResultStatus: 403
     },
@@ -412,9 +412,9 @@ const tests = [
                     "message": "x-auth-token header missing",
                 }
             ],
-            "message": "x-auth-token header missing"
+            "message": "Unauthorized"
         },
-        expectedResultStatus: 403
+        expectedResultStatus: 401
     },
     {
         info: '#15 DELETE with token of no access - fails',
@@ -442,7 +442,7 @@ const tests = [
                     "object": "users",
                 }
             ],
-            "message": "action not permitted"
+            "message": "Forbidden"
         },
         expectedResultStatus: 403
     },
@@ -493,7 +493,7 @@ const tests = [
                     "object": "users",
                 }
             ],
-            "message": "action not permitted"
+            "message": "Forbidden"
         },
         expectedResultStatus: 403
     }

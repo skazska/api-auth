@@ -9,8 +9,8 @@ import {
     IRunError,
     AbstractModelStorage
 } from "@skazska/abstract-service-model";
-import {IUserKey, IUserProps, UserModel} from "./model";
-import {UserStorage} from "./aws/storage";
+import {IUserKey, IUserProps, UserModel} from "../model";
+import {UserStorage} from "../aws/storage";
 
 const defaultStorage = UserStorage.getInstance('users');
 

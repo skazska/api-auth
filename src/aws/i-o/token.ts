@@ -1,68 +1,59 @@
 import {
-    GenericModelFactory,
-    IModelDataAdepter,
-    IModelError,
     GenericResult,
     success,
-    IExecutable,
     IAuth,
-    IAuthTokenResult,
     IError,
     failure,
-    ICUExecuteOptions,
-    IModel,
-    AbstractAuth
+    AbstractExecutable,
+    AbstractIO
 } from "@skazska/abstract-service-model";
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
-import {APIGatewayProxyResult} from "aws-lambda";
-import {UserModel, IUserKey, IUserProps} from "../../model";
+import {IAuthCredentials, ITokens} from "../../model";
 
-class TokenModelIOAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
-    getKey (data :any) :GenericResult<IUserKey, IModelError> {
-        return success({ login: data.login });
+/**
+ * Auth-io class, handles io for token authentication api
+ */
+class AuthIO extends AwsApiGwProxyIO< IAuthCredentials,ITokens > {
+    // protected options :ITokenIOOptions;
+
+    constructor(executable: AbstractExecutable<IAuthCredentials,ITokens>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+        super(executable, null, {...{successStatus: 200}, ...options});
     };
-    getProperties (data :any) :GenericResult<IUserProps, IModelError> {
-        let result :IUserProps = {
-            password :data.password,
-            name :data.name
+
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult< IAuthCredentials, IError> {
+        const creds = inputs.event.multiValueHeaders && inputs.event.multiValueHeaders['Authorization'];
+        if (!(creds && creds[1])) return failure([AbstractIO.error('Authorization header missing or incorrect')]);
+
+        const result :IAuthCredentials = {
+            type: creds[0],
+            login: inputs.event.pathParameters.login
         };
-        if (data.email) result.email = data.email;
-        if (data.person) result.person = data.person;
+
+        switch (creds[0]) {
+            case 'Basic':
+                result.password = creds[1];
+                break;
+            default:
+                return failure([AbstractIO.error('' + creds[0] + ' auth method is not supported')]);
+        }
+
         return success(result);
-    };
-    getData(key: IUserKey, properties: IUserProps): any {
-        return {...key, ...properties}
     }
 }
 
 /**
- * Model Factory for user-io
+ * Exchange-io class, handles io for token exchange api
  */
-class TokenModelIOFactory extends GenericModelFactory<IUserKey, IUserProps> {
-    constructor() { super(UserModel, new TokenModelIOAdapter()); };
-}
+class ExchangeIO extends AwsApiGwProxyIO<string,ITokens > {
+    // protected options :ITokenIOOptions;
 
-/**
- * Options interface for UserIO class options structure
- */
-interface ITokenIOOptions extends IAwsApiGwProxyIOOptions {
-    modelFactory: TokenModelIOFactory
-}
-
-/**
- * User-io class, handles io for users api common method
- */
-abstract class TokenIO<EI, EO> extends AwsApiGwProxyIO<EI,EO> {
-    protected options :ITokenIOOptions;
-
-    protected constructor(executable: IExecutable, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
-        super(executable, authenticator, {...{successStatus: 200}, ...options});
-        if (!this.options.modelFactory) this.options.modelFactory = new TokenModelIOFactory();
+    constructor(executable: AbstractExecutable<string,ITokens>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+        super(executable, null, {...{successStatus: 200}, ...options});
     };
 
-    // protected authTokens(input: IAwsApiGwProxyInput): IAuthTokenResult {
-    //     let token = input.event.headers && input.event.headers['x-auth-token'];
-    //     if (!token) return failure([AbstractAuth.error('x-auth-token header missing')]);
-    //     return success(token);
-    // }
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult< string, IError> {
+        let token = inputs.event.headers && inputs.event.headers['x-exchange-token'];
+        if (!token) return failure([AbstractIO.error('x-exchange-token header missing')]);
+        return success(token);
+    }
 }

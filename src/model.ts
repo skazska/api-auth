@@ -1,4 +1,4 @@
-import {ModelValidationResult, IModel, failure, success, GenericModel, IModelOptions} from "@skazska/abstract-service-model";
+import {ModelValidationResult, IModel, failure, success, GenericModel, IModelOptions, IAccessDetails} from "@skazska/abstract-service-model";
 import validator from 'validator';
 
 export interface IUserKey {
@@ -8,6 +8,7 @@ export interface IUserKey {
 export interface IUserProps {
     password: string
     name: string,
+    roles: string[],
     email? :string,
     person? :string,
 }
@@ -44,4 +45,23 @@ export class UserModel extends GenericModel<IUserKey, IUserProps> implements IMo
 
     // protected setOptions(options: IGenericModelOptions<IUserKey, IUserProps>): any {
     // }
+}
+
+
+export interface IAuthCredentials {
+    type :string,
+    login :string,
+    password? :string,
+    accessDetails? :IAccessDetails
+}
+
+export interface ITokens {
+    exchange :string,
+    auth :string
+}
+
+export interface IExchangeTokens {
+    exchangeToken :string,
+    login?: string,
+    accessDetails? :IAccessDetails
 }

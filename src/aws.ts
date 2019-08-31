@@ -1,5 +1,5 @@
 import {GetIO as GetUserIO, EditIO as EditUserIO, DeleteIO as DeleteUserIO} from "./aws/i-o/user";
-import {factory} from "./executables";
+import {factory as userExecFactory} from "./executables/user";
 import {Authenticator} from "./authenticator";
 
 export interface IApiGwProxyProviderConfig {
@@ -36,21 +36,21 @@ export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
     };
 };
 
-const authenticator = Authenticator.getInstance({secretSource: '@-api-secrets'});
-const readExecutable = factory.readInstance();
+const authenticator = Authenticator.getInstance();
+const readExecutable = userExecFactory.readInstance();
 const getUserIO = new GetUserIO(readExecutable, authenticator);
 
-const deleteExecutable = factory.deleteInstance();
+const deleteExecutable = userExecFactory.deleteInstance();
 const deleteUserIo = new DeleteUserIO(deleteExecutable, authenticator);
 
-const createExecutable = factory.createInstance();
+const createExecutable = userExecFactory.createInstance();
 const postUserIo = new EditUserIO(createExecutable);
 
-const replaceExecutable = factory.replaceInstance();
+const replaceExecutable = userExecFactory.replaceInstance();
 const replaceUserIo = new EditUserIO(replaceExecutable, authenticator);
 
 // TODO
-const updateExecutable = factory.updateInstance();
+const updateExecutable = userExecFactory.updateInstance();
 const updateUserIo = new EditUserIO(updateExecutable, authenticator);
 
 

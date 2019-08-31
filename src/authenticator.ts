@@ -68,7 +68,15 @@ export class Authenticator extends JWTAuth {
         return new SecretsManager(options);
     }
 
-    static getInstance(options :IAPIAuthOptions) {
-        return new Authenticator(options);
+    static getInstance(options? :IAPIAuthOptions) {
+        const opts = {
+            secretSource: (options && options.secretSource) || '@-api-secrets',
+            secretManagerClient: (options && options.secretManagerClient) || Authenticator.getSecretsManagerClient(
+                // {
+                //     region: region
+                // }
+            )
+        };
+        return new Authenticator(opts);
     }
 }

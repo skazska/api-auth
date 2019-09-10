@@ -1,32 +1,14 @@
 import {
-    IModelDataAdepter,
     GenericModelFactory,
-    GenericResult,
-    IStorageError,
-    AbstractModelStorage,
-    IStorage,
-    success,
-    IModelError
+    IStorage
 } from '@skazska/abstract-service-model';
 import { DynamodbModelStorage } from '@skazska/abstract-aws-service-model'
-import { UserModel, IUserKey, IUserProps } from "../model";
+import {UserModel, IUserKey, IUserProps, UserModelAdapter} from "../model";
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 
-class UserModelStorageAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
-    getKey (data :any) :GenericResult<IUserKey, IModelError>{
-        return success({ login: data.login });
-    };
-    getProperties (data :any) :GenericResult<IUserProps, IModelError> {
-        let result :IUserProps = {
-            password :data.password,
-            name :data.name,
-            email :data.email
-        };
-        if (data.person) result.person = data.person;
-        return success(result);
-    };
-    getData(key: IUserKey, properties: IUserProps): any {
-        return {...key, ...properties}
+class UserModelStorageAdapter extends UserModelAdapter {
+    constructor() {
+        super(['password','name','email','person','roles'])
     }
 }
 
@@ -36,7 +18,7 @@ class UserModelStorageFactory extends GenericModelFactory<IUserKey, IUserProps> 
 
 export class UserStorage
     extends DynamodbModelStorage<IUserKey, IUserProps>
-    implements IStorage<IUserKey, IUserProps, UserModel> {
+    implements IStorage<IUserKey, UserModel> {
 
     // returns new instance with default options
     static getInstance (table? :string, client? :DocumentClient) :UserStorage {

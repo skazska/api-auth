@@ -1,7 +1,5 @@
 import {
     GenericModelFactory,
-    IModelDataAdepter,
-    IModelError,
     GenericResult,
     success,
     IAuth,
@@ -13,7 +11,7 @@ import {
 } from "@skazska/abstract-service-model";
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
 import {APIGatewayProxyResult} from "aws-lambda";
-import {UserModel, IUserKey, IUserProps} from "../../model";
+import {UserModel, IUserKey, IUserProps, UserModelAdapter} from "../../model";
 
 
 /**
@@ -26,26 +24,12 @@ import {UserModel, IUserKey, IUserProps} from "../../model";
  */
 
 
-
 /**
  * User Model adapter for user-io
  */
-class UserModelIOAdapter implements IModelDataAdepter<IUserKey, IUserProps> {
-    getKey (data :any) :GenericResult<IUserKey, IModelError> {
-        return success({ login: data.login });
-    };
-    getProperties (data :any) :GenericResult<IUserProps, IModelError> {
-        let result :IUserProps = {
-            password :data.password,
-            name :data.name,
-            roles :data.roles
-        };
-        if (data.email) result.email = data.email;
-        if (data.person) result.person = data.person;
-        return success(result);
-    };
-    getData(key: IUserKey, properties: IUserProps): any {
-        return {...key, ...properties}
+class UserModelIOAdapter extends UserModelAdapter {
+    constructor() {
+        super(['password','name','email','person'])
     }
 }
 
@@ -131,7 +115,8 @@ export class EditIO extends UsersModelIO<IModel> {
 
     protected success(result: IModel): APIGatewayProxyResult {
         const data = this.options.modelFactory.data(result);
-        return super.success(data);
+        if (data.isFailure) return this.fail('encode', 'Error converting result to model', data.errors);
+        return super.success(data.get());
     }
 
     static getInstance(executable, authenticator?, options?) {
@@ -150,7 +135,8 @@ export class GetIO extends UsersKeyIO<IModel> {
 
     protected success(result: IModel): APIGatewayProxyResult {
         const data = this.options.modelFactory.data(result);
-        return super.success(data);
+        if (data.isFailure) return this.fail('encode', 'Error converting result to model', data.errors);
+        return super.success(data.get());
     }
 
     static getInstance(executable, authenticator?, options?) {

@@ -3,9 +3,9 @@ import {
     success,
     IRunError,
     IExecutableConfig,
-    AbstractExecutable, failure, IAuthIdentity, IError, IStorageError, IModel
+    AbstractExecutable, failure, IAuthIdentity, IError, IStorageError, IModel, IAccessDetails
 } from "@skazska/abstract-service-model";
-import {IAuthCredentials, ITokens, IExchangeTokens, UserModel} from "../model";
+import {IAuthCredentials, ITokens, IExchangeTokens, UserModel, IRoles} from "../model";
 import {UserStorage} from "../aws/storage";
 import {Authenticator} from "../authenticator";
 import {fail} from "assert";
@@ -37,6 +37,7 @@ const defaultAuthenticator = Authenticator.getInstance();
 export interface IGrantExecutableConfig extends IExecutableConfig {
     authenticator :Authenticator
     storage :UserStorage
+    roles :IRoles
 }
 
 /**
@@ -45,14 +46,37 @@ export interface IGrantExecutableConfig extends IExecutableConfig {
 abstract class GrantExecutable<I> extends AbstractExecutable<I, ITokens> {
     protected authenticator :Authenticator;
     protected storage: UserStorage;
+    protected roles: IRoles;
     protected constructor(props: IGrantExecutableConfig) {
         super(props);
         this.authenticator = props.authenticator;
         this.storage = props.storage;
+        this.roles = props.roles;
     }
 
-    protected getUser(login :string) :Promise< GenericResult< IModel,IStorageError >>{
-        return this.storage.load({login: login}, {});
+    protected async getUserAccessDetails(login :string) :Promise< GenericResult< IAccessDetails,IStorageError >>{
+        // get user roles
+        const userRolesResult = await this.storage.load({login: login}, {projectionExpression: 'roles'});
+        if (userRolesResult.isFailure) return userRolesResult;
+        let roles = userRolesResult.get().getProperties().roles;
+        if (!roles) roles = [];
+        if (!roles.length) roles.push('basic');
+
+        // compose accessDetails from roles
+        const accessDetails :IAccessDetails = roles.reduce((accessDetails, role) => {
+            const roleDetails = this.roles[role];
+            if (roleDetails) {
+                for (let [obj, access] of roleDetails.entries()) {
+                    if (!accessDetails[obj]) {
+                        accessDetails[obj] = [access];
+                    } else {
+                        accessDetails[obj].push(access);
+                    }
+                }
+            }
+            return accessDetails;
+        },{});
+        return success(accessDetails);
     }
 }
 
@@ -102,19 +126,19 @@ export class AuthExecutable extends GrantExecutable<IAuthCredentials> {
 
 }
 
-
-
 export const factory = {
-    auth: (authenticator? :Authenticator, storage? :UserStorage) => {
+    auth: (roles :IRoles, authenticator? :Authenticator, storage? :UserStorage) => {
         return new AuthExecutable({
             storage: storage || defaultStorage,
-            authenticator: authenticator || defaultAuthenticator
+            authenticator: authenticator || defaultAuthenticator,
+            roles: roles
         });
     },
-    exchange: (authenticator? :Authenticator, storage? :UserStorage) => {
+    exchange: (roles :IRoles, authenticator? :Authenticator, storage? :UserStorage) => {
         return new ExchangeExecutable({
             storage: storage || defaultStorage,
-            authenticator: authenticator || defaultAuthenticator
+            authenticator: authenticator || defaultAuthenticator,
+            roles: roles
         });
     }
 };

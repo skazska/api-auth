@@ -17,11 +17,11 @@ export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
             const io = config[event.httpMethod];
             const result = await io.handler({event: event, context: context, callback: callback});
 
-            if (result.isFailure) {
-                throw new Error(JSON.stringify(result.errors));
-            }
+            // if (result.isFailure) {
+            //     throw new Error(JSON.stringify(result.errors));
+            // }
 
-            return callback(null, result.get());
+            return callback(null, result);
         } catch (e) {
             console.error(e);
             callback(null, {

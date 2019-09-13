@@ -8,15 +8,16 @@ import {
     AbstractIO
 } from "@skazska/abstract-service-model";
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
-import {IAuthCredentials, ITokens} from "../../model";
+import {IAuthCredentials, ITokens, IExchangeTokens} from "../../model";
+import {AuthExecutable, ExchangeExecutable} from "../../executables/token";
 
 /**
  * Auth-io class, handles io for token authentication api
  */
-class AuthIO extends AwsApiGwProxyIO< IAuthCredentials,ITokens > {
+export class AuthIO extends AwsApiGwProxyIO< IAuthCredentials,ITokens > {
     // protected options :ITokenIOOptions;
 
-    constructor(executable: AbstractExecutable<IAuthCredentials,ITokens>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+    constructor(executable: AuthExecutable, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
         super(executable, null, {...{successStatus: 200}, ...options});
     };
 
@@ -44,16 +45,16 @@ class AuthIO extends AwsApiGwProxyIO< IAuthCredentials,ITokens > {
 /**
  * Exchange-io class, handles io for token exchange api
  */
-class ExchangeIO extends AwsApiGwProxyIO<string,ITokens > {
+export class ExchangeIO extends AwsApiGwProxyIO<IExchangeTokens,ITokens > {
     // protected options :ITokenIOOptions;
 
-    constructor(executable: AbstractExecutable<string,ITokens>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+    constructor(executable: ExchangeExecutable, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
         super(executable, null, {...{successStatus: 200}, ...options});
     };
 
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult< string, IError> {
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult< IExchangeTokens, IError> {
         let token = inputs.event.headers && inputs.event.headers['x-exchange-token'];
         if (!token) return failure([AbstractIO.error('x-exchange-token header missing')]);
-        return success(token);
+        return success({exchangeToken: token});
     }
 }

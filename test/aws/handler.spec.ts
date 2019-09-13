@@ -6,8 +6,8 @@ import {APIGatewayProxyResult} from "aws-lambda";
 import {EditIO, DeleteIO, GetIO} from "../../src/aws/i-o/user";
 import {factory} from "../../src/executables/user";
 
-import {UserStorage} from "../../src/aws/storage";
-import {apiGwProxyProvider} from "../../src/aws";
+import {UserStorage} from "../../src/aws/storage/user";
+import {userApiGwProxyProvider} from "../../src/aws";
 import {EventPayload} from './util/lambda';
 import {DynamodbModelStorage} from "@skazska/abstract-aws-service-model";
 
@@ -552,7 +552,7 @@ describe('handler general tests', () => {
 
             const context = eventContext.get({});
 
-            const handler = apiGwProxyProvider({ [test.httpMethod]: io });
+            const handler = userApiGwProxyProvider({ [test.httpMethod]: io });
 
             // stub storage client method with expected response
             clientStub[test.storageMethod].yieldsRightAsync(test.storageError, test.storageResponse);

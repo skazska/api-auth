@@ -10,9 +10,13 @@ import {
     AbstractModelStorage
 } from "@skazska/abstract-service-model";
 import {IUserKey, IUserProps, UserModel} from "../model";
-import {UserStorage} from "../aws/storage";
+import {UserStorage} from "../aws/storage/user";
 
-const defaultStorage = UserStorage.getInstance('users');
+let _defaultStorage;
+const getDefaultStorage = () => {
+    if (!_defaultStorage) _defaultStorage = UserStorage.getInstance('users');
+    return _defaultStorage;
+};
 
 export interface IUserExecutableConfig<I, O> extends ICRUDExecutableConfig<I, O, IUserKey, IUserProps> {
     accessObject :string,
@@ -63,7 +67,7 @@ export const factory = {
         return new UserCUExecutable({
             accessObject: 'users',
             operation: 'create',
-            storage: storage || defaultStorage,
+            storage: storage || getDefaultStorage(),
             executor: CRUDExecutable.createExecutor,
         });
     },
@@ -71,7 +75,7 @@ export const factory = {
         return new UserReadExecutable({
             accessObject: 'users',
             operation: 'read',
-            storage: storage || defaultStorage,
+            storage: storage || getDefaultStorage(),
             executor: CRUDExecutable.readExecutor,
         });
     },
@@ -79,7 +83,7 @@ export const factory = {
         return new UserCUExecutable({
             accessObject: 'users',
             operation: 'replace',
-            storage: storage || defaultStorage,
+            storage: storage || getDefaultStorage(),
             executor: CRUDExecutable.updateExecutor,
         });
     },
@@ -87,7 +91,7 @@ export const factory = {
         return new UserCUExecutable({
             accessObject: 'users',
             operation: 'update',
-            storage: storage || defaultStorage,
+            storage: storage || getDefaultStorage(),
             executor: CRUDExecutable.updateExecutor,
         });
     },
@@ -95,7 +99,7 @@ export const factory = {
         return new UserDeleteExecutable({
             accessObject: 'users',
             operation: 'delete',
-            storage: storage || defaultStorage,
+            storage: storage || getDefaultStorage(),
             executor: CRUDExecutable.deleteExecutor,
         });
     }

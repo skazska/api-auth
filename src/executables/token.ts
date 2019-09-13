@@ -6,9 +6,10 @@ import {
     AbstractExecutable, failure, IAuthIdentity, IError, IStorageError, IModel, IAccessDetails
 } from "@skazska/abstract-service-model";
 import {IAuthCredentials, ITokens, IExchangeTokens, UserModel, IRoles} from "../model";
-import {UserStorage} from "../aws/storage";
+import {UserStorage} from "../aws/storage/user";
 import {Authenticator} from "../authenticator";
 import {fail} from "assert";
+import {RoleStorage} from "../aws/storage/roles";
 
 /**
  * Token executable module, provides executables for:
@@ -22,13 +23,32 @@ import {fail} from "assert";
 /**
  *default storage
  */
-const defaultStorage = UserStorage.getInstance('users');
+let _defaultStorage :UserStorage;
+const getDefaultStorage = () => {
+    if (!_defaultStorage) _defaultStorage = UserStorage.getInstance('users');
+    return _defaultStorage
+};
 
 /**
  *default storage
  */
-const defaultAuthenticator = Authenticator.getInstance();
+let _defaultAuthenticator :Authenticator;
+const getDefaultAuthenticator = () => {
+    if (!_defaultAuthenticator) _defaultAuthenticator = Authenticator.getInstance();
+    return _defaultAuthenticator;
+};
 
+/**
+ * default role storage
+ */
+let _defaultRoleStorage :RoleStorage;
+const getDefaultRoleStorage = () => {
+    if (!_defaultRoleStorage) _defaultRoleStorage = RoleStorage.getInstance(
+        'api-auth',
+        {key: 'api-auth-roles'},
+    );
+    return _defaultRoleStorage;
+};
 
 /**
  * config for `GrantExecutable` constructor
@@ -37,7 +57,7 @@ const defaultAuthenticator = Authenticator.getInstance();
 export interface IGrantExecutableConfig extends IExecutableConfig {
     authenticator :Authenticator
     storage :UserStorage
-    roles :IRoles
+    roleStorage :RoleStorage
 }
 
 /**
@@ -46,25 +66,32 @@ export interface IGrantExecutableConfig extends IExecutableConfig {
 abstract class GrantExecutable<I> extends AbstractExecutable<I, ITokens> {
     protected authenticator :Authenticator;
     protected storage: UserStorage;
-    protected roles: IRoles;
+    protected roleStorage: RoleStorage;
     protected constructor(props: IGrantExecutableConfig) {
         super(props);
         this.authenticator = props.authenticator;
         this.storage = props.storage;
-        this.roles = props.roles;
+        this.roleStorage = props.roleStorage;
     }
 
     protected async getUserAccessDetails(login :string) :Promise< GenericResult< IAccessDetails,IStorageError >>{
         // get user roles
-        const userRolesResult = await this.storage.load({login: login}, {projectionExpression: 'roles'});
+        const [userRolesResult, rolesResult] = await Promise.all([
+            this.storage.load({login: login}, {projectionExpression: 'roles'}),
+            this.roleStorage.getRoles()
+        ]);
+        if (rolesResult.isFailure) return rolesResult;
         if (userRolesResult.isFailure) return userRolesResult;
-        let roles = userRolesResult.get().getProperties().roles;
-        if (!roles) roles = [];
-        if (!roles.length) roles.push('basic');
+
+        // take user current roles or `basic` role
+        let userRoles = userRolesResult.get().getProperties().roles;
+        if (!userRoles) userRoles = [];
+        if (!userRoles.length) userRoles.push('basic');
 
         // compose accessDetails from roles
-        const accessDetails :IAccessDetails = roles.reduce((accessDetails, role) => {
-            const roleDetails = this.roles[role];
+        const roles = rolesResult.get();
+        const accessDetails :IAccessDetails = userRoles.reduce((accessDetails, role) => {
+            const roleDetails = roles[role];
             if (roleDetails) {
                 for (let [obj, access] of roleDetails.entries()) {
                     if (!accessDetails[obj]) {
@@ -127,18 +154,18 @@ export class AuthExecutable extends GrantExecutable<IAuthCredentials> {
 }
 
 export const factory = {
-    auth: (roles :IRoles, authenticator? :Authenticator, storage? :UserStorage) => {
+    auth: (authenticator? :Authenticator, storage? :UserStorage, roleStorage? :RoleStorage) => {
         return new AuthExecutable({
-            storage: storage || defaultStorage,
-            authenticator: authenticator || defaultAuthenticator,
-            roles: roles
+            storage: storage || getDefaultStorage(),
+            authenticator: authenticator || getDefaultAuthenticator(),
+            roleStorage: roleStorage || getDefaultRoleStorage()
         });
     },
-    exchange: (roles :IRoles, authenticator? :Authenticator, storage? :UserStorage) => {
+    exchange: (authenticator? :Authenticator, storage? :UserStorage, roleStorage? :RoleStorage) => {
         return new ExchangeExecutable({
-            storage: storage || defaultStorage,
-            authenticator: authenticator || defaultAuthenticator,
-            roles: roles
+            storage: storage || getDefaultStorage(),
+            authenticator: authenticator || getDefaultAuthenticator(),
+            roleStorage: roleStorage || getDefaultRoleStorage()
         });
     }
 };

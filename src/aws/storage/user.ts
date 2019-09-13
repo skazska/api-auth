@@ -3,7 +3,7 @@ import {
     IStorage
 } from '@skazska/abstract-service-model';
 import { DynamodbModelStorage } from '@skazska/abstract-aws-service-model'
-import {UserModel, IUserKey, IUserProps, UserModelAdapter} from "../model";
+import {UserModel, IUserKey, IUserProps, UserModelAdapter} from "../../model";
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 
 class UserModelStorageAdapter extends UserModelAdapter {

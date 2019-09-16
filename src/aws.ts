@@ -11,7 +11,7 @@ export interface IApiGwProxyProviderConfig {
     [method: string] :() => IIO;
 }
 
-export const userApiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
+export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
     return async (event, context, callback) => {
 
         try {
@@ -39,7 +39,7 @@ const getAuthenticator = () => {
     return _authenticator;
 };
 
-export const userHandler = userApiGwProxyProvider({
+export const userHandler = apiGwProxyProvider({
     'GET'    :() => {
         const readExecutable = userExecFactory.readInstance();
         return new GetUserIO(readExecutable, getAuthenticator());
@@ -63,10 +63,10 @@ export const userHandler = userApiGwProxyProvider({
     }
 });
 
-export const authHandler = userApiGwProxyProvider({
+export const authHandler = apiGwProxyProvider({
     'GET'  :() => {
         const authExecutable = tokenExecFactory.auth();
-        return new AuthIO(authExecutable, getAuthenticator());
+        return new AuthIO(authExecutable);
     },
     'POST' :() => {
         const exchangeExecutable = tokenExecFactory.exchange();

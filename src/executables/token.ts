@@ -3,7 +3,7 @@ import {
     success,
     IRunError,
     IExecutableConfig,
-    AbstractExecutable, failure, IAuthIdentity, IError, IStorageError, IModel, IAccessDetails
+    AbstractExecutable, failure, IAuthIdentity, IError, IStorageError, IModel, IAccessDetails, AbstractAuth
 } from "@skazska/abstract-service-model";
 import {IAuthCredentials, ITokens, IExchangeTokens, UserModel, IRoles} from "../model";
 import {UserStorage} from "../aws/storage/user";
@@ -74,17 +74,30 @@ abstract class GrantExecutable<I> extends AbstractExecutable<I, ITokens> {
         this.roleStorage = props.roleStorage;
     }
 
-    protected async getUserAccessDetails(login :string) :Promise< GenericResult< IAccessDetails,IStorageError >>{
+    protected checkUserPassword(user :UserModel, password :string) :boolean {
+        return true;
+    }
+
+    protected async getUserAccessDetails(login :string, password? :string) :Promise< GenericResult< IAccessDetails,IRunError >>{
         // get user roles
         const [userRolesResult, rolesResult] = await Promise.all([
-            this.storage.load({login: login}, {projectionExpression: 'roles'}),
+            this.storage.load({login: login}, {projectionExpression: 'roles,password'}),
             this.roleStorage.getRoles()
         ]);
+
         if (rolesResult.isFailure) return rolesResult;
-        if (userRolesResult.isFailure) return userRolesResult;
+
+        if (userRolesResult.isFailure) {
+            if (userRolesResult.errors[0].message === 'not found') return failure([AbstractAuth.error('bad credentials')]);
+            return userRolesResult;
+        }
+
+        const user = userRolesResult.get();
+        if (password && !this.checkUserPassword(user, password)) return failure([AbstractAuth.error('bad credentials')]);
+
 
         // take user current roles or `basic` role
-        let userRoles = userRolesResult.get().getProperties().roles;
+        let userRoles = user.getProperties().roles;
         if (!userRoles) userRoles = [];
         if (!userRoles.length) userRoles.push('basic');
 
@@ -93,11 +106,11 @@ abstract class GrantExecutable<I> extends AbstractExecutable<I, ITokens> {
         const accessDetails :IAccessDetails = userRoles.reduce((accessDetails, role) => {
             const roleDetails = roles[role];
             if (roleDetails) {
-                for (let [obj, access] of roleDetails.entries()) {
+                for (let obj in roleDetails) {
                     if (!accessDetails[obj]) {
-                        accessDetails[obj] = [access];
+                        accessDetails[obj] = roleDetails[obj];
                     } else {
-                        accessDetails[obj].push(access);
+                        accessDetails[obj].push(roleDetails[obj]);
                     }
                 }
             }
@@ -127,6 +140,7 @@ export class ExchangeExecutable extends GrantExecutable<IExchangeTokens> {
 
     protected async _execute(params: IExchangeTokens): Promise<GenericResult<ITokens, IRunError>> {
 
+
         return Promise.resolve(success({
             exchange: '',
             auth: ''
@@ -145,10 +159,23 @@ export class AuthExecutable extends GrantExecutable<IAuthCredentials> {
 
     protected async _execute(params: IAuthCredentials): Promise<GenericResult<ITokens, IRunError>> {
 
-        return Promise.resolve(success({
-            exchange: '',
-            auth: ''
-        }));
+        let accessDetails = await this.getUserAccessDetails(params.login, params.password);
+
+        if (accessDetails.isFailure) return failure(accessDetails.errors);
+
+
+        return Promise.all([
+            await this.authenticator.grant({}, params.login, []),
+            await this.authenticator.grant(accessDetails.get(), params.login, [])
+        ]).then(tokens => {
+            if (tokens[0].isFailure) return failure(tokens[0].errors);
+            if (tokens[1].isFailure) return failure(tokens[1].errors);
+
+            return success({
+                exchange: tokens[0].get(),
+                auth: tokens[1].get()
+            });
+        })
     }
 
 }

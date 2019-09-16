@@ -22,24 +22,27 @@ export class AuthIO extends AwsApiGwProxyIO< IAuthCredentials,ITokens > {
     };
 
     protected data(inputs: IAwsApiGwProxyInput): GenericResult< IAuthCredentials, IError> {
-        const creds = inputs.event.multiValueHeaders && inputs.event.multiValueHeaders['Authorization'];
-        if (!(creds && creds[1])) return failure([AbstractIO.error('Authorization header missing or incorrect')]);
-
-        const result :IAuthCredentials = {
-            type: creds[0],
-            login: inputs.event.pathParameters.login
-        };
-
-        switch (creds[0]) {
-            case 'Basic':
-                result.password = creds[1];
-                break;
-            default:
-                return failure([AbstractIO.error('' + creds[0] + ' auth method is not supported')]);
-        }
-
+        const credentials = inputs.event.headers && inputs.event.headers['x-auth-basic'];
+        if (!credentials) return failure([AbstractIO.error('Authorization header missing or incorrect')]);
+        const result :IAuthCredentials = AuthIO.decodeCredentials(credentials);
         return success(result);
     }
+
+    static encodeCredentials (login :string, pass :string) :string {
+        let result = JSON.stringify({login: login, password: pass});
+        return Buffer.from(result).toString('base64');
+    }
+
+    static decodeCredentials (str :string) :IAuthCredentials {
+        let result = Buffer.from(str, 'base64').toString('ascii');
+        return JSON.parse(result);
+    }
+
+
+    static getInstance(executable, options?) {
+        return new AuthIO(executable, null, options);
+    }
+
 }
 
 /**
@@ -56,5 +59,9 @@ export class ExchangeIO extends AwsApiGwProxyIO<IExchangeTokens,ITokens > {
         let token = inputs.event.headers && inputs.event.headers['x-exchange-token'];
         if (!token) return failure([AbstractIO.error('x-exchange-token header missing')]);
         return success({exchangeToken: token});
+    }
+
+    static getInstance(executable, authenticator, options?) {
+        return new AuthIO(executable, authenticator, options);
     }
 }

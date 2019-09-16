@@ -82,8 +82,8 @@ export class UserModelAdapter extends SimpleModelAdapter<IUserKey, IUserProps> {
  * Auth tokens structures
  */
 export interface IAuthCredentials {
-    type :string,
-    login :string,
+    type? :string,
+    login? :string,
     password? :string,
     accessDetails? :IAccessDetails
 }

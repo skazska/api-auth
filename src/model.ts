@@ -88,11 +88,15 @@ export interface IAuthCredentials {
     accessDetails? :IAccessDetails
 }
 
+/**
+ * token set
+ */
 export interface ITokens {
     exchange :string,
     auth :string
 }
 
+/** */
 export interface IExchangeTokens {
     exchangeToken :string,
     login?: string,
@@ -105,4 +109,12 @@ export interface IExchangeTokens {
  */
 export interface IRoles {
     [roleName :string]: IAccessDetails;
+}
+
+/**
+ * Secret values
+ */
+export interface ISecretValue {
+    authApiSecret :string,
+    authPasswordSalt :string
 }

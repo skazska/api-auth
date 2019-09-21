@@ -62,6 +62,21 @@ export class UserRDExecutable<O> extends UserExecutable<IUserKey, O> {
 export class UserReadExecutable extends UserRDExecutable<UserModel> {}
 export class UserDeleteExecutable extends UserRDExecutable<null> {}
 
+// const createExecutor = async (storage :UserStorage, params :ICUExecuteOptions) :Promise<GenericResult<any, IRunError>> => {
+//
+// };
+//
+// export class UserCreateExecutable extends UserCUExecutable {
+//     constructor(props :IUserExecutableConfig<ICUExecuteOptions, UserModel>) {
+//         super(props);
+//     }
+//
+//     protected checkUserSelf(identity :IAuthIdentity, params :ICUExecuteOptions) :boolean {
+//         return identity.subject === params.model.getKey().login;
+//     };
+// }
+
+
 export const factory = {
     createInstance: (storage? :UserStorage) => {
         return new UserCUExecutable({

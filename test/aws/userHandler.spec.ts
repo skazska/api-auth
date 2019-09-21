@@ -13,6 +13,7 @@ import {DynamodbModelStorage} from "@skazska/abstract-aws-service-model";
 
 
 import sinon from "sinon";
+import {APISecretStorage} from "../../src/aws/storage/secret";
 // import sinonChai = require("sinon-chai");
 // use(sinonChai);
 
@@ -517,17 +518,17 @@ describe('handler general tests', () => {
     let eventContext;
     let client;
     let clientStub;
-    let secret;
     let secretStub;
+    let secretStorage;
+    let secretClient;
 
     const testRun = test => {
         it(test.info, async () => {
             const executable = test.executable(storage);
             let io;
             let event;
-                secret = Authenticator.getSecretsManagerClient();
-                authenticator = Authenticator.getInstance({secretSource: 'source', secretManagerClient: secret});
-                secretStub = sinon.stub(secret);
+                authenticator = Authenticator.getInstance('source', secretStorage);
+                secretStub = sinon.stub(secretClient);
                 // stub SecretManager client method with expected response
                 secretStub.getSecretValue.callsFake(getFake({SecretString: secretResponse}));
             if (test.noAuthenticator) {
@@ -595,6 +596,10 @@ describe('handler general tests', () => {
     beforeEach(() => {
         client = DynamodbModelStorage.getDefaultClient();
         storage = UserStorage.getInstance('users', client);
+
+        secretClient = APISecretStorage.getDefaultClient();
+        secretStorage = APISecretStorage.getInstance(secretClient);
+
         authenticator = null;
 
         eventInput = new EventPayload(null, 'input');

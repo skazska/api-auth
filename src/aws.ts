@@ -13,14 +13,7 @@ export interface IApiGwProxyProviderConfig {
 
 export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
     return async (event, context, callback) => {
-
-        try {
-            const io = config[event.httpMethod]();
-            const result = await io.handler({event: event, context: context, callback: callback});
-
-            return callback(null, result);
-        } catch (e) {
-            console.error(e);
+        const error = (e: Error) => {
             callback(null, {
                 statusCode: 500,
                 body: e,
@@ -28,7 +21,17 @@ export const apiGwProxyProvider = (config :IApiGwProxyProviderConfig) => {
                     'Content-Type': 'application/json',
                 },
             })
+        };
 
+        if (!config[event.httpMethod])
+            return error(new Error('Http method ' + event.httpMethod + ' not supported'));
+        try {
+            const io = config[event.httpMethod]();
+            const result = await io.handler({event: event, context: context, callback: callback});
+
+            return callback(null, result);
+        } catch (e) {
+            error(e);
         }
     };
 };

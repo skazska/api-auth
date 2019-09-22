@@ -77,8 +77,8 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
 
     /** checks if provided password's hash match user's password hash */
     protected async checkUserPassword(user :UserModel, password :string) :Promise<GenericResult<boolean>> {
-        return (await this.authenticator.hash(user.getProperties().password))
-            .transform(hash => hash === password);
+        return (await this.authenticator.hash(password))
+            .transform(hash => hash === user.getProperties().password);
     }
 
     /**
@@ -103,7 +103,7 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
         const user = userRolesResult.get();
         if (password) {
             let isValidPassword = await this.checkUserPassword(user, password);
-            if (!isValidPassword) return failure([AbstractAuth.error('bad credentials')]);
+            if (isValidPassword.isFailure || !isValidPassword.get()) return failure([AbstractAuth.error('bad credentials')]);
         }
 
         // take user current roles or `basic` role

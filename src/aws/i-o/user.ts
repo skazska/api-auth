@@ -63,7 +63,7 @@ abstract class UsersIO<EI, EO> extends AwsApiGwProxyIO<EI,EO> {
  * User-io class, handles io for users api method which needs user login in path as input param
  */
 abstract class UsersKeyIO<EO> extends UsersIO<IUserKey,EO> {
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult<IUserKey, IError> {
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult<IUserKey> {
         return success({login: inputs.event.pathParameters.login});
     }
 }
@@ -72,11 +72,11 @@ abstract class UsersKeyIO<EO> extends UsersIO<IUserKey,EO> {
  * User-io class, handles io for users api method which needs user data provided in request body
  */
 abstract class UsersModelIO<EO> extends UsersIO<ICUExecuteOptions,EO> {
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult<ICUExecuteOptions, IError> {
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult<ICUExecuteOptions> {
 
         try {
             let data = JSON.parse(inputs.event.body);
-            return this.options.modelFactory.dataModel(data).wrap(
+            return this.options.modelFactory.dataModel(data).transform(
                 model => { return {model: model}}
             );
         } catch (e) {

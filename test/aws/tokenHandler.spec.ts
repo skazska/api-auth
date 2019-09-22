@@ -186,10 +186,13 @@ describe('token handler general tests', () => {
         // execute handler (wrapped in Promise to keep async/await style of routine, prepared handler should work
         // with callback)
         const result: APIGatewayProxyResult = await new Promise((resolve, reject) => {
-            handler.call({}, event, context, (err, result) => {
-                if (err) return reject(err);
-                return resolve(result);
-            });
+            // use timeout to have time gap for new tokens generation
+            setTimeout(()=>{
+                handler.call({}, event, context, (err, result) => {
+                    if (err) return reject(err);
+                    return resolve(result);
+                });
+            }, 100);
         });
 
         // check results

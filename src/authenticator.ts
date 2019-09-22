@@ -6,6 +6,8 @@ import {GenericResult, IAuthError, AbstractAuth, success, failure, RegExIdentity
 import {APISecretStorage} from './aws/storage/secret';
 import {ISecretValue} from "./model";
 
+import crypto = require('crypto');
+
 /**
  * Module provides Api Authenticator
  */
@@ -38,7 +40,7 @@ export class Authenticator extends JWTAuth {
     /**
      * returns secret to be used for encode and verify signature from secret storage
      */
-    protected async load(): Promise<GenericResult<ISecretValue, IError>> {
+    protected async load(): Promise<GenericResult<ISecretValue>> {
         if (!this.secretCache) {
             const secretName = this.options.secretSource;
 
@@ -54,27 +56,31 @@ export class Authenticator extends JWTAuth {
     /**
      * returns secret to be used for encode and verify signature from secret storage
      */
-    protected async salt(): Promise<GenericResult<string, IError>> {
+    protected async salt(): Promise<GenericResult<string>> {
         const secretResult = await this.load();
-        if (secretResult.isFailure) return failure([secretResult.errors[0]]); //AbstractAuth.error('bad secret')
+        if (secretResult.isFailure) return secretResult.asFailure(); //AbstractAuth.error('bad secret')
         return success(this.secretCache.authPasswordSalt);
     }
 
     /**
-     * returns password's hash TODO
+     * returns password's hash
      */
-    protected async hash(password :string): Promise<GenericResult<string, IError>> {
-        const secretResult = await this.load();
-        if (secretResult.isFailure) return failure([secretResult.errors[0]]); //AbstractAuth.error('bad secret')
-        return success(this.secretCache.authPasswordSalt);
+    async hash(password :string): Promise<GenericResult<string>> {
+        const secretResult = await this.salt();
+        return secretResult.transform(salt => {
+            const hash = crypto.createHash('sha256');
+            hash.update(password);
+            hash.update(salt);
+            return hash.digest().toString('utf-8');
+        });
     }
 
     /**
      * returns secret to be used for encode and verify signature from secret storage
      */
-    protected async secret(): Promise<GenericResult<string, IError>> {
+    protected async secret(): Promise<GenericResult<string>> {
         const secretResult = await this.load();
-        if (secretResult.isFailure) return failure([secretResult.errors[0]]); //AbstractAuth.error('bad secret')
+        if (secretResult.isFailure) return secretResult.asFailure(); //AbstractAuth.error('bad secret')
         return success(this.secretCache.authApiSecret);
     }
 

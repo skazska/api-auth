@@ -22,7 +22,7 @@ export interface IUserExecutableConfig<I, O> extends ICRUDExecutableConfig<I, O,
     accessObject :string,
     operation :string,
     storage :UserStorage,
-    executor :(storage :AbstractModelStorage<IUserKey, IUserProps>, params: I)=>Promise<GenericResult<O, IRunError>>
+    executor :(storage :AbstractModelStorage<IUserKey, IUserProps>, params: I)=>Promise<GenericResult<O>>
 }
 
 // export interface IUserCUExecutableOptions extends ICUExecuteOptions<IUserKey, IUserProps> {}
@@ -30,7 +30,7 @@ export interface IUserExecutableConfig<I, O> extends ICRUDExecutableConfig<I, O,
 export abstract class UserExecutable<I, O> extends CRUDExecutable<I, O, IUserKey, IUserProps> {
     protected abstract checkUserSelf(identity :IAuthIdentity, params :I) :boolean;
 
-    protected _authenticate(identity :IAuthIdentity, params :I) :GenericResult<any, IAuthError> {
+    protected _authenticate(identity :IAuthIdentity, params :I) :GenericResult<any> {
         let access = identity.access(this.accessObject, 'self');
         if (!access.isFailure && access.get() && this.checkUserSelf(identity, params)) {
             return success(true);

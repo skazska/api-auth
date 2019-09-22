@@ -21,7 +21,7 @@ export class RoleStorage extends S3Storage<IRoles, string>{
         this.getOptions = options.getOptions;
     }
 
-    getRoles(): Promise<GenericResult<IRoles, IStorageError>> {
+    getRoles(): Promise<GenericResult<IRoles>> {
         return super.load(this.key, this.getOptions);
     }
 

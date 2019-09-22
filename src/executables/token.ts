@@ -75,10 +75,10 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
     }
 
 
-    /** TODO checks if provided password's hash match user's password hash */
-    protected checkUserPassword(user :UserModel, password :string) :Promise<boolean> {
-        //this.authenticator.passwordHash();
-        return Promise.resolve(true);
+    /** checks if provided password's hash match user's password hash */
+    protected async checkUserPassword(user :UserModel, password :string) :Promise<GenericResult<boolean>> {
+        return (await this.authenticator.hash(user.getProperties().password))
+            .transform(hash => hash === password);
     }
 
     /**
@@ -86,7 +86,7 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
      * checks password match user if provided
      * compose user access details
      */
-    protected async getUserAccessDetails(login :string, password? :string) :Promise< GenericResult< IAccessDetails,IRunError >>{
+    protected async getUserAccessDetails(login :string, password? :string) :Promise<GenericResult<IAccessDetails>>{
         // get user roles
         const [userRolesResult, rolesResult] = await Promise.all([
             this.storage.load({login: login}, {projectionExpression: 'roles,password'}),
@@ -135,7 +135,7 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
      * @param login
      * @param password
      */
-    protected async generateTokens(login :string, password? :string) :Promise<GenericResult<ITokens, IRunError>> {
+    protected async generateTokens(login :string, password? :string) :Promise<GenericResult<ITokens>> {
         let accessDetails = await this.getUserAccessDetails(login, password);
 
         if (accessDetails.isFailure) return failure(accessDetails.errors);
@@ -164,7 +164,7 @@ export class AuthExecutable extends GrantExecutable<IAuthCredentials> {
         super(props);
     }
 
-    protected _execute(params: IAuthCredentials): Promise<GenericResult<ITokens, IRunError>> {
+    protected _execute(params: IAuthCredentials): Promise<GenericResult<ITokens>> {
         return this.generateTokens(params.login, params.password);
     }
 
@@ -185,7 +185,7 @@ export class ExchangeExecutable extends GrantExecutable<IExchangeTokens> {
      * @param params
      * @param identity
      */
-    async run(params :IExchangeTokens, identity :IAuthIdentity) :Promise<GenericResult<ITokens, IError>> {
+    async run(params :IExchangeTokens, identity :IAuthIdentity) :Promise<GenericResult<ITokens>> {
         if (!identity) return Promise.resolve(
             failure([AbstractExecutable.error('identity is not provided', 'token exchange')])
         );
@@ -194,7 +194,7 @@ export class ExchangeExecutable extends GrantExecutable<IExchangeTokens> {
     }
 
 
-    protected _execute(params: IExchangeTokens): Promise<GenericResult<ITokens, IRunError>> {
+    protected _execute(params: IExchangeTokens): Promise<GenericResult<ITokens>> {
         return this.generateTokens(params.login);
     }
 

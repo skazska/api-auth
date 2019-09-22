@@ -23,7 +23,7 @@ export class AuthIO extends AwsApiGwProxyIO< IAuthCredentials,ITokens > {
         super(executable, null, {...{successStatus: 200}, ...options});
     };
 
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult< IAuthCredentials, IError> {
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult<IAuthCredentials> {
         const credentials = inputs.event.headers && inputs.event.headers['x-auth-basic'];
         if (!credentials) return failure([AbstractIO.error('Authorization header missing or incorrect')]);
         const result :IAuthCredentials = AuthIO.decodeCredentials(credentials);
@@ -71,7 +71,7 @@ export class ExchangeIO extends AwsApiGwProxyIO<IExchangeTokens,ITokens > {
      * returns x-auth-token header value or fails for executable
      * @param input
      */
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult< IExchangeTokens, IError> {
+    protected data(inputs: IAwsApiGwProxyInput): GenericResult<IExchangeTokens> {
         let token = inputs.event.headers && inputs.event.headers['x-exchange-token'];
         if (!token) return failure([AbstractIO.error('x-exchange-token header missing')]);
         return success({exchangeToken: token});

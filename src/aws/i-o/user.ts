@@ -12,6 +12,7 @@ import {
 import {AwsApiGwProxyIO, IAwsApiGwProxyInput, IAwsApiGwProxyIOOptions} from "@skazska/abstract-aws-service-model";
 import {APIGatewayProxyResult} from "aws-lambda";
 import {UserModel, IUserKey, IUserProps, UserModelAdapter} from "../../model";
+import {Authenticator} from "../../authenticator";
 
 
 /**
@@ -44,7 +45,7 @@ class UserModelIOFactory extends GenericModelFactory<IUserKey, IUserProps> {
  * Options interface for UserIO class options structure
  */
 interface IUsersIOOptions extends IAwsApiGwProxyIOOptions {
-    modelFactory: UserModelIOFactory
+    modelFactory?: UserModelIOFactory
 }
 
 /**
@@ -63,8 +64,8 @@ abstract class UsersIO<EI, EO> extends AwsApiGwProxyIO<EI,EO> {
  * User-io class, handles io for users api method which needs user login in path as input param
  */
 abstract class UsersKeyIO<EO> extends UsersIO<IUserKey,EO> {
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult<IUserKey> {
-        return success({login: inputs.event.pathParameters.login});
+    protected data(inputs: IAwsApiGwProxyInput): Promise<GenericResult<IUserKey>> {
+        return Promise.resolve(success({login: inputs.event.pathParameters.login}));
     }
 }
 
@@ -72,16 +73,16 @@ abstract class UsersKeyIO<EO> extends UsersIO<IUserKey,EO> {
  * User-io class, handles io for users api method which needs user data provided in request body
  */
 abstract class UsersModelIO<EO> extends UsersIO<ICUExecuteOptions,EO> {
-    protected data(inputs: IAwsApiGwProxyInput): GenericResult<ICUExecuteOptions> {
+    protected data(inputs: IAwsApiGwProxyInput): Promise<GenericResult<ICUExecuteOptions>> {
 
         try {
             let data = JSON.parse(inputs.event.body);
-            return this.options.modelFactory.dataModel(data).transform(
+            return Promise.resolve(this.options.modelFactory.dataModel(data).transform(
                 model => { return {model: model}}
-            );
+            ));
         } catch (e) {
             console.error(e);
-            return failure([e]);
+            return Promise.resolve(failure([e]));
         }
     }
 }
@@ -104,12 +105,11 @@ export class DeleteIO extends UsersKeyIO<null> {
     }
 }
 
-
 /**
- * User-io class, handles io for users api method CREATE, PUT or PATCH
+ * User-io class, handles io for users api method PUT or PATCH
  */
 export class EditIO extends UsersModelIO<IModel> {
-    constructor(executable: AbstractExecutable<ICUExecuteOptions,IModel>, authenticator?: IAuth, options?: IAwsApiGwProxyIOOptions) {
+    constructor(executable: AbstractExecutable<ICUExecuteOptions,IModel>, authenticator?: IAuth, options?: IUsersIOOptions) {
         super(executable, authenticator, {...{successStatus: 201}, ...options});
     };
 
@@ -124,6 +124,33 @@ export class EditIO extends UsersModelIO<IModel> {
     }
 }
 
+/**
+ * Options interface for EditIO class options structure
+ */
+interface ICreateIOOptions extends IUsersIOOptions {
+    utilAuthenticator: Authenticator
+}
+
+/**
+ * User-io class, handles io for users api method CREATE
+ */
+export class CreateIO extends EditIO {
+    readonly utilAuthenticator: Authenticator;
+
+    constructor(executable: AbstractExecutable<ICUExecuteOptions,IModel>, authenticator?: IAuth, options?: ICreateIOOptions) {
+        super(executable, authenticator, options);
+        this.utilAuthenticator = options.utilAuthenticator;
+
+    }
+
+    protected async data(inputs: IAwsApiGwProxyInput): Promise<GenericResult<ICUExecuteOptions>> {
+        const data = await super.data(inputs);
+        if (data.isFailure) return data.asFailure();
+        const props = data.get().model.getProperties();
+        if (props.password) props.password = await this.utilAuthenticator.hash(props.password);
+        return data;
+    }
+}
 
 /**
  * User-io class, handles io for users api method GET

@@ -55,9 +55,11 @@ const getDefaultRoleStorage = () => {
  * needs authenticator to generate token pairs
  */
 export interface IGrantExecutableConfig extends IExecutableConfig {
-    authenticator :Authenticator
-    storage :UserStorage
-    roleStorage :RoleStorage
+    authenticator :Authenticator;
+    storage :UserStorage;
+    roleStorage :RoleStorage;
+    exchangeExpiresIn :string;
+    authExpiresIn :string;
 }
 
 /**
@@ -67,11 +69,16 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
     readonly authenticator :Authenticator;
     readonly storage: UserStorage;
     readonly roleStorage: RoleStorage;
+    readonly exchangeExpiresIn :string;
+    readonly authExpiresIn :string;
+
     protected constructor(props: IGrantExecutableConfig) {
         super(props);
         this.authenticator = props.authenticator;
         this.storage = props.storage;
         this.roleStorage = props.roleStorage;
+        this.exchangeExpiresIn = props.exchangeExpiresIn;
+        this.authExpiresIn = props.authExpiresIn;
     }
 
 
@@ -142,8 +149,8 @@ abstract class GrantExecutable<I extends IAuthCredentials|IExchangeTokens> exten
 
 
         return Promise.all([
-            await this.authenticator.grant({}, login, []),
-            await this.authenticator.grant(accessDetails.get(), login, [])
+            await this.authenticator.grant({}, login, {expiresIn: this.exchangeExpiresIn}),
+            await this.authenticator.grant(accessDetails.get(), login, {expiresIn: this.authExpiresIn})
         ]).then(tokens => {
             if (tokens[0].isFailure) return failure(tokens[0].errors);
             if (tokens[1].isFailure) return failure(tokens[1].errors);
@@ -205,14 +212,18 @@ export const factory = {
         return new AuthExecutable({
             storage: storage || getDefaultStorage(),
             authenticator: authenticator || getDefaultAuthenticator(),
-            roleStorage: roleStorage || getDefaultRoleStorage()
+            roleStorage: roleStorage || getDefaultRoleStorage(),
+            exchangeExpiresIn: '10d',
+            authExpiresIn: '4h'
         });
     },
     exchange: (authenticator? :Authenticator, storage? :UserStorage, roleStorage? :RoleStorage) => {
         return new ExchangeExecutable({
             storage: storage || getDefaultStorage(),
             authenticator: authenticator || getDefaultAuthenticator(),
-            roleStorage: roleStorage || getDefaultRoleStorage()
+            roleStorage: roleStorage || getDefaultRoleStorage(),
+            exchangeExpiresIn: '10d',
+            authExpiresIn: '4h'
         });
     }
 };

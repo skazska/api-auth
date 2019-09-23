@@ -1,4 +1,4 @@
-import {GetIO as GetUserIO, EditIO as EditUserIO, DeleteIO as DeleteUserIO} from "./aws/i-o/user";
+import {GetIO as GetUserIO, EditIO as EditUserIO, DeleteIO as DeleteUserIO, CreateIO as CreateUserIO} from "./aws/i-o/user";
 
 import {factory as userExecFactory} from "./executables/user";
 import {Authenticator} from "./authenticator";
@@ -49,7 +49,7 @@ export const userHandler = apiGwProxyProvider({
     },
     'POST'   :() => {
         const createExecutable = userExecFactory.createInstance();
-        return new EditUserIO(createExecutable);
+        return new CreateUserIO(createExecutable, null, {utilAuthenticator: getAuthenticator()});
     },
     'PUT'    :() => {
         const replaceExecutable = userExecFactory.replaceInstance();

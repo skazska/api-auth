@@ -58,8 +58,9 @@ describe('token handler general tests', () => {
     let secretStub;
 
     let tokens :ITokens; //IExchangeTokens;
+    let passwordHash :string; //password hash to return from user storage
 
-    beforeEach(() => {
+    beforeEach(async () => {
         // dunamodb client to stub user data loading (user roles) for user storage
         client = DynamodbModelStorage.getDefaultClient();
         // user storage
@@ -88,11 +89,15 @@ describe('token handler general tests', () => {
         s3ClientStub = sinon.stub(s3Client);
         secretStub = sinon.stub(secretClient);
 
+        // instantiate authenticator
+        authenticator = Authenticator.getInstance('source', secretStorage);
+
         // stub SecretManager client method with expected response
         secretStub.getSecretValue.callsFake(getFake(null, {SecretString: secretResponse}));
         // stub roles storage client method with expected response
         s3ClientStub['getObject'].callsFake(getFake(null, {Body: JSON.stringify(rolesData)}));
 
+        passwordHash = (await authenticator.hash('rightPassword')).get();
     });
 
     afterEach(() => {
@@ -100,11 +105,9 @@ describe('token handler general tests', () => {
     });
 
     it('success auth returns set of tokens', async () => {
-        // stub user storage client method with expected response
-        clientStub['get'].yieldsRightAsync(null, {Item: {login: 'usr', password: 'pass', name: 'name'}});
 
-        // instantiate authenticator
-        authenticator = Authenticator.getInstance('source', secretStorage);
+        // stub user storage client method with expected response
+        clientStub['get'].yieldsRightAsync(null, {Item: {login: 'usr', password: passwordHash, name: 'name'}});
 
         // instantiate auth executable
         const executable = factory.auth(authenticator, storage, roleStorage);
@@ -174,7 +177,7 @@ describe('token handler general tests', () => {
         // configure event
         const event = eventInput.get({
             httpMethod: 'POST',
-            headers: {'x-exchange-token': tokens.exchange}
+            body: JSON.stringify({'exchangeToken': tokens.exchange})
         });
 
         // configure context
@@ -186,13 +189,13 @@ describe('token handler general tests', () => {
         // execute handler (wrapped in Promise to keep async/await style of routine, prepared handler should work
         // with callback)
         const result: APIGatewayProxyResult = await new Promise((resolve, reject) => {
-            // use timeout to have time gap for new tokens generation
+            // use timeout to have time gap for new tokens generation otherwise they'll be same by content
             setTimeout(()=>{
                 handler.call({}, event, context, (err, result) => {
                     if (err) return reject(err);
                     return resolve(result);
                 });
-            }, 100);
+            }, 1000);
         });
 
         // check results
